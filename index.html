@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>海报批量裁切工具</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="topbar">
+  <h1>海报批量裁切</h1>
+  <div class="spacer"></div>
+  <button id="btn-reset-all" class="btn danger">全部重置</button>
+  <button id="btn-export" class="btn primary">导出已确认 (0)</button>
+</header>
+
+<main id="layout">
+  <!-- 左：图片列表 -->
+  <aside id="imglist"></aside>
+
+  <!-- 中：编辑区 -->
+  <section id="editor">
+    <div class="toolbar">
+      <span class="tb-label">比例</span>
+      <div id="ratio-btns" class="btn-group"></div>
+      <span class="tb-sep"></span>
+      <button id="btn-rot90" class="btn" title="顺时针旋转 90°">⟳ 90°</button>
+      <label class="tb-label" for="fine-slider">微调</label>
+      <input type="range" id="fine-slider" min="-15" max="15" step="0.5" value="0">
+      <span id="angle-readout" class="mono">0°</span>
+      <span class="tb-sep"></span>
+      <button id="btn-zoom-out" class="btn">−</button>
+      <span id="zoom-readout" class="mono">100%</span>
+      <button id="btn-zoom-in" class="btn">＋</button>
+      <button id="btn-zoom-fit" class="btn">适应</button>
+    </div>
+    <div id="stage">
+      <canvas id="main-canvas"></canvas>
+    </div>
+    <div id="hint">拖动空白处新建选区 · 框内拖动移动 · 八角/边手柄调整 · 双击回居中 · 方向键 1px / Shift+方向 10px · 按住空格看原图 · Ctrl+Z 撤销</div>
+  </section>
+
+  <!-- 右：调色 + 预览 + 导出 -->
+  <aside id="sidebar">
+    <section class="panel">
+      <h2>调色</h2>
+      <div id="preset-btns" class="btn-group wrap"></div>
+      <div class="slider-row"><label>亮度</label><input type="range" id="sl-bri" min="-100" max="100" step="1" value="0"><span class="mono" id="v-bri">0</span></div>
+      <div class="slider-row"><label>对比度</label><input type="range" id="sl-con" min="-100" max="100" step="1" value="0"><span class="mono" id="v-con">0</span></div>
+      <div class="slider-row"><label>饱和度</label><input type="range" id="sl-sat" min="-100" max="100" step="1" value="0"><span class="mono" id="v-sat">0</span></div>
+      <div class="slider-row"><label>色温</label><input type="range" id="sl-tmp" min="-100" max="100" step="1" value="0"><span class="mono" id="v-tmp">0</span></div>
+    </section>
+
+    <section class="panel">
+      <h2>实时预览</h2>
+      <div class="preview-row"><div class="pv-label mono" id="pv-label-320">320</div><canvas id="pv-320" class="pv"></canvas></div>
+      <div class="preview-row"><div class="pv-label mono" id="pv-label-640">640</div><canvas id="pv-640" class="pv"></canvas></div>
+      <div class="preview-row"><div class="pv-label mono" id="pv-label-1280">1280</div><canvas id="pv-1280" class="pv"></canvas></div>
+    </section>
+
+    <section class="panel">
+      <button id="btn-confirm" class="btn primary wide">标记为已确认</button>
+      <p class="note">导出只包含已确认的图；清单 (manifest.json) 与本次实际导出的文件一一对应。浏览器如提示「允许下载多个文件」请点允许。</p>
+    </section>
+  </aside>
+</main>
+
+<script src="js/pipeline.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
