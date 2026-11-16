@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手写台球 · Handmade Pool</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <!-- 左栏：状态与犯规 -->
+  <aside class="panel panel-left">
+    <h1 class="title">手写台球</h1>
+    <div class="stat-block">
+      <div class="stat-label">剩余球数</div>
+      <div class="stat-value" id="remaining">15</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">已出杆</div>
+      <div class="stat-value" id="shot-count">0</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">犯规提示</div>
+      <div class="foul-text" id="foul">无</div>
+    </div>
+    <div class="help">
+      <div class="stat-label">操作</div>
+      <ul>
+        <li>移动鼠标 — 瞄准</li>
+        <li>按住左键 / 空格 — 蓄力</li>
+        <li>松开 — 出杆</li>
+        <li>方向键 — 微调角度</li>
+        <li>R — 重开一局</li>
+        <li>D — 调试面板</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- 中央球桌 -->
+  <main class="stage">
+    <canvas id="table"></canvas>
+    <div class="message" id="message"></div>
+    <div class="debug-panel hidden" id="debug-panel">
+      <pre id="debug-content"></pre>
+    </div>
+  </main>
+
+  <!-- 右栏：控制 -->
+  <aside class="panel panel-right">
+    <div class="control-block">
+      <div class="stat-label">力度</div>
+      <div class="power-wrap">
+        <div class="power-meter">
+          <div class="power-fill" id="power-fill"></div>
+        </div>
+        <div class="power-text" id="power-text">0%</div>
+      </div>
+      <input type="range" id="power-slider" min="0" max="100" value="0"
+             class="power-slider" orient="vertical">
+    </div>
+
+    <div class="control-block">
+      <div class="stat-label">杆法（上旋/下旋 + 左右塞）</div>
+      <div class="spin-pad" id="spin-pad">
+        <div class="spin-cross-h"></div>
+        <div class="spin-cross-v"></div>
+        <div class="spin-dot" id="spin-dot"></div>
+      </div>
+      <div class="spin-readout">
+        <span id="side-text">中杆</span>
+        <span id="top-text">平杆</span>
+      </div>
+      <div class="spin-presets">
+        <button id="spin-back" title="低杆">低杆</button>
+        <button id="spin-follow" title="高杆">高杆</button>
+        <button id="spin-left" title="左塞">左塞</button>
+        <button id="spin-right" title="右塞">右塞</button>
+        <button id="spin-center" title="中杆">回中</button>
+      </div>
+    </div>
+
+    <div class="control-block">
+      <button class="btn" id="btn-restart">重开一局</button>
+      <button class="btn btn-secondary" id="btn-debug">调试面板</button>
+    </div>
+  </aside>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

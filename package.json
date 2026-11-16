@@ -1,0 +1,11 @@
+{
+  "name": "handmade-pool",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "纯手写 Canvas 2D 台球：程序化素材 + 刚体物理（滑动/滚动两段摩擦、塞、弹性碰撞）",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js"
+  }
+}
