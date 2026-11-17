@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缺齿齿轮箱装配与传动仿真</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>缺齿齿轮箱 · 装配与传动仿真</h1>
+  <div id="selftest" class="selftest"></div>
+</header>
+
+<main class="layout">
+  <!-- 左：控制面板 -->
+  <section class="panel controls">
+    <h2>1. 选择三只齿轮</h2>
+    <div class="gear-selects">
+      <label>A 输入轴<select id="gearA"></select></label>
+      <label>B 中间轴<select id="gearB"></select></label>
+      <label>C 输出轴<select id="gearC"></select></label>
+    </div>
+    <div id="geomStatus" class="geom-status"></div>
+
+    <h2>2. 工况参数</h2>
+    <div class="param-grid">
+      <label>输入转速 (rpm)
+        <input id="inputRpm" type="number" min="200" max="1400" step="10">
+      </label>
+      <label>负载扭矩 (N·m)
+        <input id="loadNm" type="number" min="0" max="200" step="5">
+      </label>
+      <label>随机种子（可重复性）
+        <input id="seed" type="number" step="1">
+      </label>
+    </div>
+
+    <h2>预设工况（验证用）</h2>
+    <div class="presets">
+      <button data-preset="normal" class="preset">正常工况</button>
+      <button data-preset="extreme" class="preset warn">极限载荷</button>
+      <button data-preset="loose" class="preset caution">失稳·松旷</button>
+      <button data-preset="jam" class="preset danger">过紧卡死</button>
+    </div>
+
+    <h2>3. 仿真控制</h2>
+    <div class="transport">
+      <button id="btnRun" class="primary">▶ 启动</button>
+      <button id="btnPause">⏸ 暂停</button>
+      <button id="btnStep">⏭ 单步</button>
+      <button id="btnReset">↺ 重置</button>
+      <button id="btnReplay">⟲ 回放</button>
+    </div>
+    <p class="hint">暂停与单步推进同一个固定物理步长（1/180 s），状态完全等价；
+      回放读取录制快照而非重新积分。</p>
+  </section>
+
+  <!-- 中：画布与限值 -->
+  <section class="panel stage">
+    <div class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div id="faultBanner" class="fault-banner">
+        <div class="fault-title">⛔ 保护跳闸 · 停止计算</div>
+        <div id="faultDetail"></div>
+      </div>
+    </div>
+    <div id="limitBar" class="limit-bar"></div>
+    <div class="trend-wrap">
+      <div class="trend-legend">
+        <span><i style="background:#8ff0a4"></i>输出转速</span>
+        <span><i style="background:#ff9a9a"></i>接触压力</span>
+        <span><i style="background:#ffd479"></i>油温</span>
+        <span class="muted">（纵轴归一化，红虚线=85% 告警位）</span>
+      </div>
+      <canvas id="trendCanvas"></canvas>
+    </div>
+  </section>
+
+  <!-- 右：关键量与变化 -->
+  <section class="panel metrics">
+    <h2>关键物理量</h2>
+    <div id="statGrid" class="stat-grid"></div>
+    <h2>最近一次变化</h2>
+    <div id="changeLog" class="change-log"></div>
+  </section>
+</main>
+
+<script src="physics.js"></script>
+<script src="audio.js"></script>
+<script src="renderer.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
