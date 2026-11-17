@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大理石大板纹理生成器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>大理石大板纹理生成器</h1>
+    <p>同一颗料切 4 块：纹路互不相同，拼成 2×2 无缝相接。全部纹理由 canvas 实时计算，无任何图片素材。</p>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <h2>参数</h2>
+
+      <div class="field">
+        <label>随机种子</label>
+        <div class="row">
+          <input type="number" id="seed" value="20240601" step="1">
+          <button id="randomSeed" type="button">随机</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>脉络密度 <span class="val" id="densityVal"></span></label>
+        <input type="range" id="density" min="1" max="16" step="1" value="6">
+      </div>
+
+      <div class="field">
+        <label>脉络走向 <span class="val" id="angleVal"></span></label>
+        <input type="range" id="angle" min="0" max="180" step="1" value="30">
+      </div>
+
+      <div class="field">
+        <label>扭曲强度 <span class="val" id="warpVal"></span></label>
+        <input type="range" id="warp" min="0" max="3" step="0.01" value="1.2">
+      </div>
+
+      <div class="field">
+        <label>色带宽度 <span class="val" id="bandWidthVal"></span></label>
+        <input type="range" id="bandWidth" min="0.05" max="1" step="0.01" value="0.35">
+      </div>
+
+      <div class="field">
+        <label>法线强度 <span class="val" id="normalStrengthVal"></span></label>
+        <input type="range" id="normalStrength" min="0" max="5" step="0.1" value="2">
+      </div>
+
+      <div class="field row">
+        <div>
+          <label>底色</label>
+          <input type="color" id="baseColor" value="#e8e2d8">
+        </div>
+        <div>
+          <label>脉色</label>
+          <input type="color" id="veinColor" value="#5a5248">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>导出分辨率（单块）</label>
+        <select id="tileSize">
+          <option value="1024" selected>1024 × 1024</option>
+          <option value="2048">2048 × 2048（较慢）</option>
+        </select>
+      </div>
+
+      <button id="exportBtn" type="button">导出贴图</button>
+      <div id="progressWrap" hidden>
+        <div id="progressBar"></div>
+      </div>
+      <p class="hint">导出内容：4 块板各自的底色 / 法线 / 粗糙度（共 12 张），外加 3 张 2×2 图集。</p>
+    </aside>
+
+    <section id="preview">
+      <div class="preview-item">
+        <h3>底色 · 2×2 拼接预览</h3>
+        <canvas id="previewAlbedo" width="512" height="512"></canvas>
+      </div>
+      <div class="preview-row">
+        <div class="preview-item">
+          <h3>法线</h3>
+          <canvas id="previewNormal" width="256" height="256"></canvas>
+        </div>
+        <div class="preview-item">
+          <h3>粗糙度</h3>
+          <canvas id="previewRough" width="256" height="256"></canvas>
+        </div>
+      </div>
+      <div id="downloads"></div>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
