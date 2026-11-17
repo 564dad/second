@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>磁悬浮穿环实验台</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 12px; background: #0d1117; color: #c9d1d9;
+    font: 13px/1.5 "SF Mono", Consolas, "Microsoft YaHei", monospace;
+  }
+  h1 { font-size: 16px; margin: 0 0 8px; color: #58a6ff; }
+  main { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  canvas { background: #0a0e14; border: 1px solid #30363d; border-radius: 6px; }
+  aside { width: 380px; display: flex; flex-direction: column; gap: 10px; }
+  section { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px 10px; }
+  section h2 { font-size: 12px; margin: 0 0 6px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .row label { width: 88px; flex: none; color: #8b949e; }
+  .row input[type=range] { flex: 1; }
+  .row .val { width: 64px; text-align: right; color: #58a6ff; }
+  button {
+    background: #21262d; color: #c9d1d9; border: 1px solid #30363d; border-radius: 5px;
+    padding: 5px 10px; cursor: pointer; font: inherit; margin: 2px 2px 2px 0;
+  }
+  button:hover { border-color: #58a6ff; }
+  button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 1px 4px; }
+  td.k { color: #8b949e; width: 34%; }
+  td.v { color: #e6edf3; width: 36%; text-align: right; }
+  td.d { color: #3fb950; width: 30%; text-align: right; font-size: 11px; }
+  td.d.neg { color: #f85149; }
+  #status { font-weight: bold; }
+  .st-running { color: #3fb950; } .st-paused, .st-ready { color: #d29922; }
+  .st-tripped, .st-fail, .st-timeout { color: #f85149; } .st-success { color: #3fb950; }
+  #vlog {
+    background: #0a0e14; border: 1px solid #30363d; border-radius: 4px;
+    height: 180px; overflow: auto; padding: 6px; margin: 4px 0 0;
+    white-space: pre-wrap; font-size: 11px; line-height: 1.45;
+  }
+  .limits { color: #8b949e; font-size: 11px; }
+  .limits b { color: #d29922; }
+  #tripinfo { color: #f85149; font-size: 11px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>磁悬浮穿环实验台 — 四线圈 · 三环 · 安全落座</h1>
+<main>
+  <canvas id="cv" width="560" height="720"></canvas>
+  <aside>
+    <section>
+      <h2>控制（系统存在电流延迟 τ=0.7s 与外部扰动）</h2>
+      <div class="row"><label>目标电流 I*</label><input id="slI" type="range" min="0" max="6" step="0.05" value="2.40"><span class="val" id="slIv"></span></div>
+      <div class="row"><label>阻尼 c</label><input id="slD" type="range" min="0" max="0.6" step="0.01" value="0.30"><span class="val" id="slDv"></span></div>
+      <div class="row"><label>扰动强度 σ</label><input id="slS" type="range" min="0" max="2" step="0.05" value="0.15"><span class="val" id="slSv"></span></div>
+      <div class="row">
+        <button id="btnRun" class="primary">开始</button>
+        <button id="btnStep">单步</button>
+        <button id="btnReset">重置</button>
+        <button id="btnReplay" disabled>回放</button>
+        <button id="btnAudio">音效:关</button>
+      </div>
+      <div>状态：<span id="status">就绪</span>　得分：<span id="score">0</span>　穿环：<span id="rings">0/3</span></div>
+      <div id="tripinfo"></div>
+    </section>
+    <section>
+      <h2>关键物理量（最近一次变化 Δ）</h2>
+      <table id="meters"></table>
+      <div class="limits">安全限：温度 ≤ <b>120°C</b> · 速度 ≤ <b>6.0 m/s</b> · 磁压 ≤ <b>3.0 N</b> · |x| &lt; <b>2.48 m</b> · y ≤ <b>9.8 m</b> —— 超限即冻结并标记触发点</div>
+    </section>
+    <section>
+      <h2>工况验证（与界面共用同一物理核心）</h2>
+      <button id="btnValidate">运行全部验证</button>
+      <span style="font-size:11px;color:#8b949e">正常 / 极限载荷 / 失稳 + 一致性</span>
+      <pre id="vlog">尚未运行。也可在命令行执行 node test/validate.js</pre>
+    </section>
+  </aside>
+</main>
+
+<script src="physics.js"></script>
+<script>
+'use strict';
+/* global DT, P, freshState, step, validateAll, tripLine, fmt */
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const ML = 60, MR = 30, MT = 30, MB = 50;
+const XW = 3.0, YW = 10.0; // 世界半宽 / 总高
+const wx = x => ML + (x + XW) / (2 * XW) * (W - ML - MR);
+const wy = y => H - MB - (y / YW) * (H - MT - MB);
+
+// ---- 仿真状态与运行模式 ----
+let S = freshState();
+let mode = 'ready'; // ready | run | paused | replay
+let rIdx = 0;       // 回放游标
+let acc = 0, lastTs = 0;
+
+const $ = id => document.getElementById(id);
+const slI = $('slI'), slD = $('slD'), slS = $('slS');
+
+function syncSlidersToState() {
+  S.Itarget = parseFloat(slI.value);
+  S.damp = parseFloat(slD.value);
+  S.disturb = parseFloat(slS.value);
+}
+function syncSliderLabels() {
+  $('slIv').textContent = parseFloat(slI.value).toFixed(2) + ' A';
+  $('slDv').textContent = parseFloat(slD.value).toFixed(2);
+  $('slSv').textContent = parseFloat(slS.value).toFixed(2);
+}
+[slI, slD, slS].forEach(el => el.addEventListener('input', () => { syncSliderLabels(); syncSlidersToState(); }));
+syncSliderLabels(); syncSlidersToState();
+
+const STATUS_TEXT = {
+  ready: '就绪', running: '运行中', paused: '已暂停', tripped: '已触发保护',
+  success: '成功落座', fail: '落座失败', timeout: '超时', replay: '回放中',
+};
+
+$('btnRun').addEventListener('click', () => {
+  if (S.status === 'tripped' || S.status === 'success' || S.status === 'fail' || S.status === 'timeout') return;
+  if (mode === 'run') { mode = 'paused'; S.status = 'paused'; }
+  else { mode = 'run'; S.status = 'running'; }
+  updateButtons();
+});
+$('btnStep').addEventListener('click', () => {
+  if (mode === 'replay') return;
+  if (S.status === 'tripped' || S.status === 'success' || S.status === 'fail' || S.status === 'timeout') return;
+  mode = 'paused';
+  S.status = 'running';   // 单步：与连续运行调用同一个 step()，状态完全一致
+  step(S, DT);
+  S.status = 'paused';
+  updateButtons();
+});
+$('btnReset').addEventListener('click', () => {
+  S = freshState();       // 固定种子重建：多次重置初始条件不漂移
+  syncSlidersToState();
+  mode = 'ready'; rIdx = 0; acc = 0;
+  $('tripinfo').textContent = '';
+  updateButtons();
+});
+$('btnReplay').addEventListener('click', () => {
+  if (S.trace.length < 2) return;
+  mode = 'replay'; rIdx = 0;
+  updateButtons();
+});
+
+function updateButtons() {
+  $('btnRun').textContent = mode === 'run' ? '暂停' : '开始';
+  $('btnReplay').disabled = S.trace.length < 2 || mode === 'run';
+}
+
+// ---- Web Audio：音高随高度、响度随速度 ----
+let AC = null, osc = null, gain = null, audioOn = false;
+$('btnAudio').addEventListener('click', () => {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    osc = AC.createOscillator(); gain = AC.createGain();
+    osc.type = 'sine'; gain.gain.value = 0;
+    osc.connect(gain); gain.connect(AC.destination);
+    osc.start();
+  }
+  audioOn = !audioOn;
+  if (audioOn) AC.resume();
+  $('btnAudio').textContent = '音效:' + (audioOn ? '开' : '关');
+});
+function updateAudio(st) {
+  if (!AC || !audioOn) return;
+  const active = mode === 'run';
+  const f = 150 + st.y * 55;
+  const g = active ? 0.04 + Math.min(Math.hypot(st.vx, st.vy) * 0.02, 0.05) : 0;
+  osc.frequency.setTargetAtTime(f, AC.currentTime, 0.03);
+  gain.gain.setTargetAtTime(g, AC.currentTime, 0.05);
+}
+
+// ---- 主循环：固定步长累积器，连续运行与单步共用同一 step() ----
+function frame(ts) {
+  if (!lastTs) lastTs = ts;
+  const el = Math.min((ts - lastTs) / 1000, 0.1);
+  lastTs = ts;
+  if (mode === 'run') {
+    acc += el;
+    while (acc >= DT) {
+      step(S, DT);
+      acc -= DT;
+      if (S.status !== 'running') { mode = 'paused'; updateButtons(); break; }
+    }
+  } else if (mode === 'replay') {
+    rIdx += Math.max(1, Math.round(el / DT / 4)); // 约实时速度回放记录
+    if (rIdx >= S.trace.length) { rIdx = S.trace.length - 1; mode = 'paused'; updateButtons(); }
+  }
+  const st = mode === 'replay' && S.trace.length ? S.trace[rIdx] : S;
+  render(st);
+  updateMeters(st);
+  updateAudio(st);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---- 渲染 ----
+function render(st) {
+  ctx.clearRect(0, 0, W, H);
+
+  // 井道侧壁
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(wx(-P.xWall), wy(0)); ctx.lineTo(wx(-P.xWall), wy(YW));
+  ctx.moveTo(wx(P.xWall), wy(0)); ctx.lineTo(wx(P.xWall), wy(YW));
+  ctx.stroke();
+
+  // 磁场：竖直磁力线 + 线圈辉光，强度随实际电流 I
+  const iRatio = Math.min(st.I / 6, 1);
+  ctx.save();
+  for (let i = -2; i <= 2; i++) {
+    const x = i * 0.9;
+    ctx.strokeStyle = `rgba(88,166,255,${0.05 + iRatio * 0.25})`;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath(); ctx.moveTo(wx(x), wy(0.4)); ctx.lineTo(wx(x), wy(9.6)); ctx.stroke();
+    ctx.setLineDash([]);
+    // 方向箭头（向上）
+    ctx.fillStyle = `rgba(88,166,255,${0.15 + iRatio * 0.4})`;
+    for (let y = 1.4; y < 9.6; y += 1.6) {
+      ctx.beginPath();
+      ctx.moveTo(wx(x), wy(y + 0.12));
+      ctx.lineTo(wx(x) - 3, wy(y - 0.06));
+      ctx.lineTo(wx(x) + 3, wy(y - 0.06));
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // 四组线圈
+  for (const cy of P.coilY) {
+    const g = ctx.createRadialGradient(wx(0), wy(cy), 4, wx(0), wy(cy), 60);
+    g.addColorStop(0, `rgba(88,166,255,${0.10 + iRatio * 0.35})`);
+    g.addColorStop(1, 'rgba(88,166,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(wx(0) - 60, wy(cy) - 60, 120, 120);
+    ctx.fillStyle = '#8b949e';
+    ctx.fillRect(wx(0) - 70, wy(cy) - 5, 140, 10);
+    ctx.fillStyle = `rgba(88,166,255,${0.3 + iRatio * 0.7})`;
+    for (let k = -3; k <= 3; k++) ctx.fillRect(wx(0) + k * 18 - 4, wy(cy) - 8, 8, 16);
+    ctx.fillStyle = '#8b949e'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+    ctx.fillText('线圈', wx(0) + 76, wy(cy) + 3);
+  }
+
+  // 底座
+  ctx.fillStyle = '#6e7681';
+  ctx.fillRect(wx(-P.baseHalf), wy(P.baseY), wx(P.baseHalf) - wx(-P.baseHalf), 8);
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText('底座', wx(P.baseHalf) + 6, wy(P.baseY) + 6);
+
+  // 三个圆环（金色，中间为通道；被碰过的环变红）
+  P.rings.forEach((r, i) => {
+    const hit = S.events.some(e => e.type === 'hit' && e.idx === i);
+    const passed = i < S.ringIdx;
+    ctx.strokeStyle = hit ? '#f85149' : passed ? '#3fb950' : '#d4a017';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(wx(-P.xWall), wy(r.y)); ctx.lineTo(wx(r.x - r.w), wy(r.y));
+    ctx.moveTo(wx(r.x + r.w), wy(r.y)); ctx.lineTo(wx(P.xWall), wy(r.y));
+    ctx.stroke();
+    ctx.fillStyle = ctx.strokeStyle; ctx.font = '10px monospace';
+    ctx.fillText('环' + (i + 1), wx(P.xWall) - 24, wy(r.y) - 6);
+  });
+
+  // 小球轨迹
+  if (S.trace.length > 1) {
+    ctx.strokeStyle = 'rgba(210,153,34,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const upto = mode === 'replay' ? rIdx : S.trace.length - 1;
+    for (let i = 0; i <= upto; i++) {
+      const p = S.trace[i];
+      i ? ctx.lineTo(wx(p.x), wy(p.y)) : ctx.moveTo(wx(p.x), wy(p.y));
+    }
+    ctx.stroke();
+  }
+
+  // 小球
+  const bx = wx(st.x), by = wy(st.y);
+  const bg = ctx.createRadialGradient(bx - 3, by - 3, 1, bx, by, 12);
+  bg.addColorStop(0, '#fff'); bg.addColorStop(1, '#d29922');
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.arc(bx, by, P.ballR / (2 * XW) * (W - ML - MR), 0, 7); ctx.fill();
+
+  // 暂停/就绪/触发时显示受力方向与变化趋势
+  if (mode !== 'run' && mode !== 'replay' && S.lastF) {
+    const F = S.lastF, sc = 60;
+    const arrows = [
+      [F.g.x, F.g.y, '#6e7681', '重力'],
+      [F.c.x, F.c.y, '#58a6ff', '线圈'],
+      [F.d.x, F.d.y, '#f0883e', '阻尼'],
+      [F.e.x, F.e.y, '#3fb950', '扰动'],
+    ];
+    ctx.font = '10px monospace'; ctx.textAlign = 'left';
+    for (const [fx, fy, color, name] of arrows) {
+      const ex = bx + fx * sc, ey = by - fy * sc;
+      if (Math.hypot(ex - bx, ey - by) < 4) continue;
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, ey); ctx.stroke();
+      const ang = Math.atan2(ey - by, ex - bx);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 6 * Math.cos(ang - 0.4), ey - 6 * Math.sin(ang - 0.4));
+      ctx.lineTo(ex - 6 * Math.cos(ang + 0.4), ey - 6 * Math.sin(ang + 0.4));
+      ctx.fill();
+      ctx.fillText(name, ex + 4, ey);
+    }
+    // 速度趋势箭头
+    if (Math.hypot(st.vx, st.vy) > 0.05) {
+      ctx.strokeStyle = '#d2a8ff'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(bx, by);
+      ctx.lineTo(bx + st.vx * 30, by - st.vy * 30); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#d2a8ff'; ctx.fillText('v趋势', bx + st.vx * 30 + 4, by - st.vy * 30);
+    }
+  }
+
+  // 触发点标记（冻结在触发位置，不继续计算）
+  if (S.trip) {
+    const r = S.trip, tx = wx(r.x), ty = wy(r.y);
+    ctx.strokeStyle = '#f85149'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(tx - 9, ty - 9); ctx.lineTo(tx + 9, ty + 9);
+    ctx.moveTo(tx + 9, ty - 9); ctx.lineTo(tx - 9, ty + 9);
+    ctx.stroke();
+    ctx.fillStyle = '#f85149'; ctx.font = '11px monospace';
+    ctx.fillText('触发点: ' + r.reason, Math.min(tx + 12, W - 200), ty);
+  }
+
+  // 回放事件标记
+  if (mode === 'replay') {
+    for (const e of S.events) {
+      if (e.i != null && Math.abs(e.i - rIdx) < 6) {
+        ctx.fillStyle = e.type === 'hit' || e.type === 'trip' ? '#f85149' : '#3fb950';
+        ctx.font = '12px monospace';
+        ctx.fillText(e.type === 'pass' ? '✓ 穿环' : e.type === 'hit' ? '✗ 碰环' : e.type, wx(e.x || 0) + 14, wy(e.y || 0));
+      }
+    }
+    ctx.fillStyle = '#d29922'; ctx.font = '12px monospace';
+    ctx.fillText(`回放 ${rIdx}/${S.trace.length - 1}`, ML + 6, MT + 4);
+  }
+
+  // 顶部状态条
+  ctx.fillStyle = '#8b949e'; ctx.font = '11px monospace'; ctx.textAlign = 'left';
+  ctx.fillText(`t=${st.t.toFixed(2)}s  I(实际)=${st.I.toFixed(2)}A  I*(目标)=${S.Itarget.toFixed(2)}A  T=${st.T.toFixed(1)}°C`, ML, 16);
+}
+
+// ---- 物理量读数（含最近一次变化 Δ）----
+const METER_DEFS = [
+  ['t', '时间', v => v.toFixed(2) + ' s'],
+  ['y', '高度 y', v => v.toFixed(3) + ' m'],
+  ['vy', '速度 vy', v => v.toFixed(3) + ' m/s'],
+  ['x', '横移 x', v => v.toFixed(3) + ' m'],
+  ['vx', '速度 vx', v => v.toFixed(3) + ' m/s'],
+  ['I', '实际电流', v => v.toFixed(2) + ' A'],
+  ['T', '线圈温度', v => v.toFixed(1) + ' °C'],
+];
+const metersEl = $('meters');
+metersEl.innerHTML = METER_DEFS.map(([k, n]) =>
+  `<tr><td class="k">${n}</td><td class="v" id="m_${k}">–</td><td class="d" id="d_${k}"></td></tr>`).join('') +
+  `<tr><td class="k">磁压 F</td><td class="v" id="m_F">–</td><td class="d" id="d_F"></td></tr>`;
+let prevMeter = {};
+function updateMeters(st) {
+  const cur = { t: st.t, y: st.y, vy: st.vy, x: st.x, vx: st.vx, I: st.I, T: st.T,
+                F: S.lastF ? S.lastF.coilMag : 0 };
+  for (const [k, , fmtF] of METER_DEFS.concat([['F', '磁压', v => v.toFixed(3) + ' N']])) {
+    const v = cur[k];
+    $('m_' + k).textContent = fmtF(v);
+    const dEl = $('d_' + k);
+    if (prevMeter[k] !== undefined) {
+      const d = v - prevMeter[k];
+      dEl.textContent = (d >= 0 ? 'Δ+' : 'Δ') + d.toPrecision(2);
+      dEl.className = 'd' + (d < 0 ? ' neg' : '');
+    }
+  }
+  prevMeter = cur;
+  const stKey = mode === 'replay' ? 'replay' : S.status;
+  const sEl = $('status');
+  sEl.textContent = STATUS_TEXT[stKey] || stKey;
+  sEl.className = 'st-' + stKey;
+  $('score').textContent = st.score !== undefined ? st.score : S.score;
+  $('rings').textContent = S.passed + '/3';
+  if (S.trip) $('tripinfo').textContent = '⚠ ' + tripLine(S);
+}
+
+// ---- 验证面板：与 Node 脚本共用 physics.js 的 validateAll ----
+$('btnValidate').addEventListener('click', () => {
+  const logEl = $('vlog');
+  logEl.textContent = '';
+  validateAll(line => { logEl.textContent += line + '\n'; logEl.scrollTop = logEl.scrollHeight; });
+});
+
+updateButtons();
+</script>
+</body>
+</html>
