@@ -1,0 +1,68 @@
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex;
+  font: 14px/1.5 "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  background: #1e1e22; color: #ddd;
+}
+
+/* 左侧参数面板 */
+#panel {
+  width: 300px; flex: 0 0 300px;
+  padding: 16px; overflow-y: auto;
+  background: #26262b; border-right: 1px solid #3a3a40;
+}
+#panel h1 { font-size: 17px; margin: 0 0 14px; }
+#panel h2 { font-size: 14px; margin: 18px 0 8px; color: #aaa; }
+
+.row { margin-bottom: 10px; }
+.row label { display: flex; justify-content: space-between; color: #bbb; margin-bottom: 2px; }
+.row output { color: #eee; font-variant-numeric: tabular-nums; }
+.row input[type="range"] { width: 100%; accent-color: #c88a4a; }
+
+.seed-row { display: flex; align-items: center; gap: 8px; }
+.seed-row label { margin: 0; }
+.seed-row input {
+  flex: 1; min-width: 0; padding: 4px 6px;
+  background: #1a1a1e; color: #eee; border: 1px solid #444; border-radius: 4px;
+}
+.seed-row button { flex: 0 0 auto; }
+
+button {
+  padding: 6px 12px; cursor: pointer;
+  background: #3a3a40; color: #eee; border: 1px solid #555; border-radius: 4px;
+}
+button:hover { background: #4a4a52; }
+.buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+#regen { background: #c88a4a; border-color: #c88a4a; color: #1a1a1e; font-weight: 600; }
+#regen:hover { background: #d99a5a; }
+
+#status { margin-top: 10px; font-size: 12px; color: #8f8; min-height: 1.5em; }
+#status.busy { color: #fc6; }
+
+/* 贴图缩略图 */
+.thumbs { display: flex; gap: 8px; }
+.thumbs figure { margin: 0; text-align: center; cursor: pointer; }
+.thumbs canvas {
+  width: 84px; height: 84px; display: block;
+  border: 2px solid #444; border-radius: 4px; image-rendering: pixelated;
+}
+.thumbs figure.active canvas { border-color: #c88a4a; }
+.thumbs figcaption { font-size: 12px; color: #aaa; margin-top: 2px; }
+
+/* 右侧九宫格预览 */
+main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; background: #26262b; border-bottom: 1px solid #3a3a40;
+}
+.toolbar .spacer { flex: 1; }
+#tileScroll {
+  flex: 1; overflow: auto; display: grid; place-items: center;
+  padding: 24px;
+}
+#tileView {
+  background: #111;
+  image-rendering: pixelated;   /* 放大 200% 时看真实像素，便于查接缝 */
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+}

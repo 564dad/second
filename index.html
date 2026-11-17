@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实木地板贴图生成器</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside id="panel">
+  <h1>实木地板贴图生成器</h1>
+
+  <div class="row seed-row">
+    <label for="seed">种子</label>
+    <input type="number" id="seed" value="20260101" step="1">
+    <button id="dice" title="随机种子">🎲</button>
+  </div>
+
+  <div class="row"><label>板宽 <output id="o-plankW"></output></label>
+    <input type="range" id="plankW" min="60" max="340" step="1" value="128"></div>
+  <div class="row"><label>板长 <output id="o-plankL"></output></label>
+    <input type="range" id="plankL" min="128" max="1024" step="1" value="512"></div>
+  <div class="row"><label>错缝比例 <output id="o-stagger"></output></label>
+    <input type="range" id="stagger" min="0" max="1" step="0.01" value="0.5"></div>
+  <div class="row"><label>年轮密度 <output id="o-rings"></output></label>
+    <input type="range" id="rings" min="1" max="16" step="0.5" value="6"></div>
+  <div class="row"><label>木纹扭曲 <output id="o-distort"></output></label>
+    <input type="range" id="distort" min="0" max="1" step="0.01" value="0.4"></div>
+  <div class="row"><label>结疤概率 <output id="o-knotProb"></output></label>
+    <input type="range" id="knotProb" min="0" max="1" step="0.01" value="0.25"></div>
+  <div class="row"><label>色差 <output id="o-colorVar"></output></label>
+    <input type="range" id="colorVar" min="0" max="1" step="0.01" value="0.5"></div>
+  <div class="row"><label>光泽度 <output id="o-gloss"></output></label>
+    <input type="range" id="gloss" min="0" max="1" step="0.01" value="0.5"></div>
+  <div class="row"><label>缝隙深度 <output id="o-groove"></output></label>
+    <input type="range" id="groove" min="0" max="1" step="0.01" value="0.7"></div>
+
+  <div class="row buttons">
+    <button id="regen">重新生成</button>
+    <button id="export">导出全部 PNG（512 + 1024）</button>
+  </div>
+  <div id="status">就绪</div>
+
+  <section class="maps">
+    <h2>贴图</h2>
+    <div class="thumbs">
+      <figure data-map="albedo" class="active"><canvas width="128" height="128"></canvas><figcaption>底色</figcaption></figure>
+      <figure data-map="normal"><canvas width="128" height="128"></canvas><figcaption>法线</figcaption></figure>
+      <figure data-map="roughness"><canvas width="128" height="128"></canvas><figcaption>粗糙度</figcaption></figure>
+    </div>
+  </section>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <span>九宫格平铺预览 — <b id="mapName">底色</b></span>
+    <span class="spacer"></span>
+    <button id="zoom">放大 200%</button>
+  </div>
+  <div id="tileScroll">
+    <canvas id="tileView" width="768" height="768"></canvas>
+  </div>
+</main>
+
+<script src="wood.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
