@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>字幕模板编辑器 · News / Story / Cue</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">字幕模板编辑器 <span class="brand-sub">新闻 · 剧情 · 提示卡</span></div>
+
+  <div class="tb-group" role="group" aria-label="模板">
+    <span class="tb-label">模板</span>
+    <button class="tpl-btn" data-tpl="news">📰 新闻</button>
+    <button class="tpl-btn" data-tpl="story">🎬 剧情</button>
+    <button class="tpl-btn" data-tpl="cue">🃏 提示卡</button>
+  </div>
+
+  <div class="tb-group" role="group" aria-label="历史">
+    <button id="btn-undo" title="撤销 Ctrl+Z">↶ 撤销</button>
+    <button id="btn-redo" title="重做 Ctrl+Shift+Z / Ctrl+Y">↷ 重做</button>
+  </div>
+
+  <div class="tb-group" role="group" aria-label="工程">
+    <button id="btn-save">💾 保存工程</button>
+    <button id="btn-load">📂 重新载入</button>
+    <button id="btn-restore-autosave">↺ 恢复自动保存</button>
+    <input type="file" id="file-load" accept=".json,application/json" hidden />
+    <button id="btn-autosave">⏱ 自动保存：关</button>
+  </div>
+
+  <div class="tb-group" role="group" aria-label="案例">
+    <button id="btn-case-default">默认案例</button>
+    <button id="btn-case-edge">边界案例</button>
+  </div>
+
+  <div class="tb-group" role="group" aria-label="导出">
+    <button id="btn-export-svg">导出 SVG</button>
+    <button id="btn-export-png">导出 PNG</button>
+    <button id="btn-export-frame">导出当前帧 JSON</button>
+    <button id="btn-export-tpl">导出模板 JSON</button>
+    <button id="btn-import-tpl">导入模板 JSON</button>
+    <input type="file" id="tpl-file" accept=".json,application/json" hidden />
+  </div>
+</header>
+
+<main class="workspace">
+  <!-- 左侧：画布与时间控制 -->
+  <section class="stage-col">
+    <div class="stage-toolbar">
+      <label>画布
+        <input type="number" id="canvas-w" min="64" max="7680" step="2" /> ×
+        <input type="number" id="canvas-h" min="64" max="4320" step="2" />
+      </label>
+      <label class="zoom-ctl">缩放
+        <input type="range" id="zoom" min="0.1" max="2" step="0.05" value="1" />
+        <span id="zoom-val">100%</span>
+      </label>
+      <label class="chk"><input type="checkbox" id="show-safe" checked /> 安全框</label>
+      <label class="chk"><input type="checkbox" id="show-grid" /> 网格</label>
+    </div>
+
+    <div class="stage-scroll" id="stage-scroll">
+      <div class="stage-wrap" id="stage-wrap">
+        <canvas id="canvas" width="1280" height="720"></canvas>
+        <div class="overlay" id="overlay"></div>
+      </div>
+    </div>
+
+    <div class="timeline">
+      <div class="tl-row">
+        <button id="btn-play">▶ 播放入场</button>
+        <button id="btn-replay">⟲ 重播</button>
+        <input type="range" id="time-scrub" min="0" max="1000" value="1000" />
+        <span id="time-label">1.00s / 1.00s</span>
+      </div>
+      <div class="tl-row audio-row">
+        <button id="btn-metro" title="Web Audio 节拍器">🔔 节拍器：关</button>
+        <label>BPM <input type="number" id="bpm" min="30" max="300" value="90" /></label>
+        <label class="chk"><input type="checkbox" id="metro-sync" /> 节拍同步预览</label>
+        <span id="beat-dot" class="beat-dot"></span>
+        <span class="tl-hint">入场动画时长与关键帧在右侧「时间与动画」中编辑</span>
+      </div>
+    </div>
+
+    <div class="statusbar" id="statusbar">就绪</div>
+  </section>
+
+  <!-- 右侧：属性编辑 -->
+  <aside class="panel">
+    <details open class="panel-sec">
+      <summary>元素（文字与图形均可编辑）</summary>
+      <ul id="element-list" class="element-list"></ul>
+    </details>
+
+    <details open class="panel-sec">
+      <summary>文本属性</summary>
+      <div class="form" id="text-props">
+        <label>内容<textarea id="tp-text" rows="3" placeholder="输入字幕文本…"></textarea></label>
+        <label>字号 <input type="number" id="tp-size" min="6" max="400" step="1" /> px</label>
+        <label>颜色 <input type="color" id="tp-color" />
+          <input type="checkbox" id="tp-bold" /> 粗体
+          <input type="checkbox" id="tp-italic" /> 斜体</label>
+        <label>字体
+          <select id="tp-font"></select>
+          <button id="btn-font-upload" class="mini">上传字体…</button>
+          <input type="file" id="font-file" accept=".ttf,.otf,.woff,.woff2" hidden />
+        </label>
+        <label>对齐
+          <select id="tp-align">
+            <option value="left">左</option>
+            <option value="center">中</option>
+            <option value="right">右</option>
+          </select>
+        </label>
+        <label>行高 <input type="range" id="tp-leading" min="1" max="2.4" step="0.05" /></label>
+        <label class="chk"><input type="checkbox" id="tp-autofit" /> 自动缩字号以适应安全区</label>
+        <div class="kvf" id="tp-kf"></div>
+      </div>
+    </details>
+
+    <details open class="panel-sec">
+      <summary>图形 / 背景属性</summary>
+      <div class="form" id="shape-props">
+        <label>填充 <input type="color" id="sp-fill" /> 透明度 <input type="range" id="sp-fill-a" min="0" max="1" step="0.01" /></label>
+        <label>描边 <input type="color" id="sp-stroke" /> 宽度 <input type="number" id="sp-stroke-w" min="0" max="80" step="0.5" /> px</label>
+        <label>圆角 <input type="range" id="sp-radius" min="0" max="200" step="1" /></label>
+        <label class="btn-row">
+          <button id="btn-img-upload" class="mini">替换背景图片…</button>
+          <button id="btn-img-remove" class="mini">移除图片</button>
+          <input type="file" id="img-file" accept="image/*" hidden />
+        </label>
+        <div class="kvf" id="sp-kf"></div>
+      </div>
+    </details>
+
+    <details open class="panel-sec">
+      <summary>几何（位置 / 尺寸 / 旋转）</summary>
+      <div class="form">
+        <div class="grid4">
+          <label>X <input type="number" id="gp-x" step="1" /></label>
+          <label>Y <input type="number" id="gp-y" step="1" /></label>
+          <label>W <input type="number" id="gp-w" min="4" step="1" /></label>
+          <label>H <input type="number" id="gp-h" min="4" step="1" /></label>
+        </div>
+        <label>旋转 <input type="range" id="gp-rot" min="-180" max="180" step="1" /> <span id="gp-rot-val">0°</span></label>
+        <label>入场动画
+          <select id="gp-anim">
+            <option value="none">无</option>
+            <option value="fade">淡入</option>
+            <option value="slideUp">上滑入</option>
+            <option value="slideLeft">左滑入</option>
+            <option value="zoom">缩放入</option>
+            <option value="typewriter">打字机（文字）</option>
+          </select>
+        </label>
+        <label>入场时长 <input type="range" id="gp-dur" min="0.1" max="5" step="0.05" /> <span id="gp-dur-val">0.8s</span></label>
+        <p class="hint">画布上可直接拖拽移动、拖手柄缩放；双击文字可原位编辑。所有操作进入撤销栈。</p>
+      </div>
+    </details>
+
+    <details class="panel-sec">
+      <summary>时间与动画（关键帧）</summary>
+      <div class="form">
+        <div id="kf-editor"></div>
+        <p class="hint">关键帧保存于工程与模板 JSON，重载后逐帧一致恢复。</p>
+      </div>
+    </details>
+
+    <details class="panel-sec">
+      <summary>安全区与校验</summary>
+      <div class="form">
+        <div class="grid4">
+          <label>动作安全 %<input type="number" id="safe-action" min="0" max="25" step="0.5" value="5" /></label>
+          <label>标题安全 %<input type="number" id="safe-title" min="0" max="30" step="0.5" value="10" /></label>
+        </div>
+        <button id="btn-validate" class="mini">立即校验</button>
+        <ul id="validate-list" class="validate-list"></ul>
+      </div>
+    </details>
+  </aside>
+</main>
+
+<div id="modal-backdrop" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modal-title">提示</h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="mini">取消</button>
+      <button id="modal-ok" class="mini primary">确定</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap" class="toast-wrap"></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

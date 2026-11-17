@@ -1,0 +1,14 @@
+{
+  "name": "subtitle-template-editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "新闻/剧情/提示卡字幕模板编辑器：Canvas 渲染、安全区校验、可编辑 SVG/PNG 导出、撤销重做、Web Audio 节拍",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node test/run-tests.mjs && node test/smoke-dom.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
