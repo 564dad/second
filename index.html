@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEON ZONE — 街机弹珠台</title>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud-score" class="hud hud-tl">
+    <div class="hud-label">SCORE</div>
+    <div id="score" class="hud-value cyan">0</div>
+  </div>
+  <div id="hud-high" class="hud hud-tc">
+    <div class="hud-label">HIGH</div>
+    <div id="high" class="hud-value cyan">0</div>
+  </div>
+  <div id="hud-balls" class="hud hud-tr">
+    <div class="hud-label">BALLS</div>
+    <div id="balls" class="hud-value"></div>
+  </div>
+
+  <!-- 蓄力条 -->
+  <div id="charge-wrap"><div id="charge-bar"></div></div>
+  <div id="hint">HOLD SPACE TO CHARGE</div>
+
+  <!-- 结算 / 开始遮罩 -->
+  <div id="overlay" class="hidden">
+    <div id="overlay-title" class="neon-title">GAME OVER</div>
+    <div id="overlay-score" class="overlay-line cyan"></div>
+    <div id="overlay-best" class="overlay-line amber"></div>
+    <div id="overlay-hint" class="overlay-line amber">PRESS R TO RESTART</div>
+  </div>
+
+  <!-- 调试面板 -->
+  <div id="debug" class="hidden">
+    <div class="dbg-title">DEBUG [D]</div>
+    <div id="dbg-body"></div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

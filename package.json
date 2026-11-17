@@ -1,0 +1,11 @@
+{
+  "name": "neon-zone-pinball",
+  "version": "1.0.0",
+  "description": "纯手写 Canvas2D + WebAudio 街机弹珠台（无引擎、无物理库、无素材文件）",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "python3 tools/headless_check.py"
+  },
+  "license": "MIT"
+}
